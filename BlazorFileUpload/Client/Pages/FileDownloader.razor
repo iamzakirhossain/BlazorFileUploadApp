@@ -1,0 +1,169 @@
+﻿@page "/download"
+@using BlazorFileUpload.Shared.Dtos
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<PageTitle>File Download</PageTitle>
+
+<h1>File Download</h1>
+
+<div class="container">
+    <div class="row">
+
+
+
+        <!-- Modal -->
+        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="exampleModalLabel">Download</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="modal-body">
+                        <div class="col-md-12">
+
+                            <p></p>
+
+                            <p>
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" id="progress" aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </p>
+
+                            <p><span id="download-progress-text"></span></p>
+                        </div>
+                    </div>
+
+                    <div class="text-center" id="download-completed">
+                        <h4 class="text-center text-success" >Download Completed!</h4>
+                    </div>
+                    <div class="modal-footer">
+                    
+                        <a style="display:none;" id="save-file">Save File</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<br />
+<br />
+<br />
+
+@if (downloadDto == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>File Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var file in downloadDto)
+            {
+                var fName = @file.FileName;
+         
+                <tr>
+                    <td>@file.FileName</td>
+
+                    <td><button  class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" @onclick="() => DownloadFileFromURL(fName)">Download</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <div>
+        <input type="button" class="btn-lg btn" id="prev" @onclick="PrevPage" value="Previous" />
+
+        @for (int i = CurPage - 2; i <= CurPage + 2; i++)
+        {
+            int j = i;
+            @if (i > 0)
+            {
+                if (i == CurPage)
+                {
+                    <span class="px-2" style="font-weight:bold;cursor:pointer" @onclick="() => ShowPage(j)">@i</span>
+                }
+                else
+                {
+                    <span class="px-2" style="cursor:pointer" @onclick="() => ShowPage(j)">@i</span>
+                }
+            }
+
+           
+
+        }
+        <input type="button" class="btn-lg btn" id="next" @onclick="NextPage" value="Next" />
+        &nbsp; &nbsp; &nbsp;
+        <span>Number of Items</span>
+        <select @onchange="DoStuff">
+
+            @foreach (var template in templates)
+            {
+                <option value=@template>@template</option>
+            }
+        </select>
+    </div>
+}
+
+@code {
+    private DownloadDto[]? downloadDto;
+    private int CurPage = 1;
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ShowPage();
+    }
+
+    List<int> templates = new List<int>() { 5,10,15,20,25,30 };
+    int SelectedNumber = 5;
+
+    protected async Task DoStuff(ChangeEventArgs e)
+    {
+        SelectedNumber = Convert.ToInt32(e.Value);
+        await ShowPage();
+    }
+
+    protected async Task NextPage()
+    {
+        CurPage++;
+        await ShowPage();
+    }
+
+    protected async Task ShowPage(int i)
+    {
+        CurPage = i;
+        await ShowPage();
+    }
+
+    protected async Task PrevPage()
+    {
+        if (CurPage > 1)
+        {
+            CurPage--;
+            await ShowPage();
+        }
+    }
+
+    protected async Task ShowPage()
+    {
+        downloadDto = await Http.GetFromJsonAsync<DownloadDto[]>($"/api/Files/Download?page={CurPage}&items={SelectedNumber}");
+    }
+
+   private async Task DownloadFileFromURL(string fileName)
+    {
+
+        await JS.InvokeVoidAsync("triggerFileDownload", fileName);
+       
+    }
+
+}
